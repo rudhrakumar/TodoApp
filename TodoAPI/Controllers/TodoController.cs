@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using TodoAPI.Services;
+using TodoAPI.Models;
 
 namespace TodoAPI.Controllers
 {
@@ -17,6 +18,13 @@ namespace TodoAPI.Controllers
         {
             var items = _todoService.GetAll();
             return Ok(items);
+        }
+        
+        [HttpPost("add")]
+        public IActionResult Add([FromBody] TodoItem item)
+        {
+            _todoService.Add(item);
+            return CreatedAtAction(nameof(GetAll), new { id = item.Id }, item);
         }
     }
 }

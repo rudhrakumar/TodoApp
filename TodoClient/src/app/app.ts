@@ -1,5 +1,5 @@
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { TodoItem } from './models/todo.item';
@@ -14,6 +14,7 @@ import { TodoService } from './services/todo.service';
 })
 export class App implements OnInit {
   private readonly todoService = inject(TodoService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   todos: TodoItem[] = [];
   newTodoTitle = '';
@@ -24,21 +25,29 @@ export class App implements OnInit {
   deletingIds = new Set<number>();
 
   ngOnInit(): void {
-    this.loadTodos();
+    this.loadTodos(true);
   }
 
-  loadTodos(): void {
-    this.isLoading = true;
+  loadTodos(showLoadingScreen = false): void {
+    if (showLoadingScreen) {
+      this.isLoading = true;
+      this.cdr.detectChanges();
+    }
     this.errorMessage = '';
 
-    this.todoService.getAll().subscribe({
+    this.todoService.getAll()
+      .pipe(
+          finalize(() => {
+            this.isLoading = false;
+            this.cdr.detectChanges(); 
+          })
+        )
+      .subscribe({
       next: (data: TodoItem[]) => {
-        this.todos = data;
-        this.isLoading = false;
+        this.todos = data || [];
       },
       error: () => {
         this.errorMessage = 'Unable to load todos.';
-        this.isLoading = false;
       }
     });
   }
@@ -52,29 +61,24 @@ export class App implements OnInit {
     this.isSaving = true;
     this.errorMessage = '';
 
-    const optimisticTodo: TodoItem = {
-      id: Math.max(0, ...this.todos.map((todo) => todo.id ?? 0)) + 1,
-      title,
-      isCompleted: false,
-    };
-
-    this.todos = [...this.todos, optimisticTodo];
-    this.newTodoTitle = '';
-
-    this.todoService.add({ title, isCompleted: false }).subscribe({
-      next: () => {
-        this.isSaving = false;
-        this.loadTodos();
-      },
-      error: () => {
-        this.todos = this.todos.filter((todo) => todo.id !== optimisticTodo.id);
-        this.isSaving = false;
-        this.errorMessage = 'Unable to create todo.';
-      },
-      complete: () => {
-        this.isSaving = false;
-      }
-    });
+    this.todoService.add({ title, isCompleted: false })
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+          this.cdr.detectChanges(); 
+        })
+      )
+      .subscribe({
+       next: () => {
+          // Clear the text box and reload the list of todos
+          this.newTodoTitle = '';
+          this.loadTodos(); 
+        },
+        error: (err) => {
+          console.error('API Error:', err);
+          this.errorMessage = 'Unable to create todo.';
+        }
+      });
   }
 
   toggleTodo(todo: TodoItem): void {
@@ -86,27 +90,31 @@ export class App implements OnInit {
     const nextValue = !todo.isCompleted;
     const previousTodos = [...this.todos];
     const updatedTodo = { ...todo, isCompleted: nextValue };
+    
     this.togglingIds.add(todoId);
 
+    // Optimistically update the UI instantly
     this.todos = this.todos.map((item) =>
       item.id === todoId ? { ...item, isCompleted: nextValue } : item
     );
     this.errorMessage = '';
+    this.cdr.detectChanges();
 
     this.todoService.update(todoId, updatedTodo)
       .pipe(
         finalize(() => {
           this.togglingIds.delete(todoId);
+          this.cdr.detectChanges(); 
         })
       )
       .subscribe({
         next: () => {
-          this.todos = this.todos.map((item) =>
-            item.id === todoId ? { ...item, isCompleted: nextValue } : item
-          );
+          // The UI is already updated, so we don't need to do anything here.
         },
-        error: () => {
-          this.todos = previousTodos;
+        error: (err) => {
+          console.error('Update failed:', err);
+          // Rollback the UI if the server actually threw a real error
+          this.todos = previousTodos; 
           this.errorMessage = 'Unable to update todo.';
         }
       });
@@ -121,20 +129,25 @@ export class App implements OnInit {
     this.deletingIds.add(todoId);
     const previousTodos = [...this.todos];
 
+    // Optimistically remove the item from the UI
     this.todos = this.todos.filter((todo) => todo.id !== todoId);
     this.errorMessage = '';
+    this.cdr.detectChanges();
 
     this.todoService.delete(todoId)
       .pipe(
         finalize(() => {
           this.deletingIds.delete(todoId);
+          this.cdr.detectChanges();
         })
       )
       .subscribe({
         next: () => {
-          this.todos = this.todos.filter((todo) => todo.id !== todoId);
+           // Success! 
         },
-        error: () => {
+        error: (err) => {
+          console.error('Delete failed:', err);
+          // Rollback if it fails
           this.todos = previousTodos;
           this.errorMessage = 'Unable to delete todo.';
         }

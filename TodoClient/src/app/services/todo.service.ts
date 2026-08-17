@@ -7,23 +7,23 @@ import { TodoItem } from '../models/todo.item';
   providedIn: 'root'
 })
 export class TodoService {
-  private readonly apiUrl = 'http://localhost:5001/api/todo';
+  private readonly apiUrl = 'http://localhost:5001/todo';
 
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<TodoItem[]> {
-    return this.http.get<TodoItem[]>(`${this.apiUrl}/list`);
+    return this.http.get<TodoItem[]>(`${this.apiUrl}`);
   }
 
-  add(todo: TodoItem): Observable<TodoItem> {
-    return this.http.post<TodoItem>(this.apiUrl, todo);
+  add(todo: TodoItem): Observable<any> {
+    return this.http.post(this.apiUrl, todo, { responseType: 'text'});
   }
 
-  update(id: number, todo: TodoItem): Observable<void> {
-    return this.http.put<void>(`${this.apiUrl}/${id}`, todo);
+  update(id: number, todo: TodoItem): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${id}`, todo, { responseType: 'text'});
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  delete(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${id}`, { responseType: 'text' });
   }
 }

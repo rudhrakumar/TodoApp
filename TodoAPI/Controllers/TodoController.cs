@@ -5,7 +5,7 @@ using TodoAPI.Models;
 namespace TodoAPI.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     public class TodoController : ControllerBase
     {
         private readonly TodoService _todoService;
@@ -15,7 +15,7 @@ namespace TodoAPI.Controllers
             _todoService = todoService;
         }
 
-        [HttpGet("list")]
+        [HttpGet]
         public IActionResult GetAll()
         {
             var items = _todoService.GetAll();
@@ -37,7 +37,7 @@ namespace TodoAPI.Controllers
         public IActionResult Add([FromBody] TodoItem item)
         {
             _todoService.Add(item);
-            return Ok();
+            return Ok(item);
         }
 
         [HttpPut("{id}")]

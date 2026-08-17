@@ -38,6 +38,7 @@ namespace TodoAPI.Services
                 _todoItems.Remove(item);
             }
         }
+
         public void DeleteAll()
         {
             _todoItems.Clear();

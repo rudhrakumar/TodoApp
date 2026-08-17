@@ -89,10 +89,25 @@ namespace TodoAPI.Tests
 
             //Assert
             var actionResult = controller.GetById(expectedId);
-            var okResult = Assert.IsType<OkObjectResult>(actionResult);
-            Assert.NotNull(okResult.Value);
-            Assert.Equal("New Title", ((TodoItem)okResult.Value).Title);
-            Assert.True(((TodoItem)okResult.Value).IsCompleted);
+            var updatedItem = Assert.IsType<OkObjectResult>(actionResult);
+            Assert.NotNull(updatedItem.Value);
+            Assert.Equal("New Title", ((TodoItem)updatedItem.Value).Title);
+            Assert.True(((TodoItem)updatedItem.Value).IsCompleted);
+        }
+
+        [Fact]
+        public void Delete_ExistingItem_RemovesItem()
+        {
+            // Arrange
+            var controller = new TodoController();
+            var newItem = new TodoItem { Title = "Test Todo Item" };
+            controller.Add(newItem);
+            int itemIdToDelete = newItem.Id;
+            // Act
+            controller.Delete(itemIdToDelete);
+            // Assert
+            var result = controller.GetById(itemIdToDelete);
+            Assert.IsType<NotFoundResult>(result);
         }
     }
 }

@@ -1,0 +1,98 @@
+:host {
+  display: block;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+.todo-app {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.todo-card {
+  border: 1px solid #ccc;
+  padding: 16px;
+  background: #fff;
+}
+
+.todo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+.todo-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.todo-form input,
+.todo-content input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #999;
+}
+
+.todo-form button,
+.todo-actions button {
+  padding: 8px 12px;
+  border: 1px solid #999;
+  background: #f1f1f1;
+  cursor: pointer;
+}
+
+.todo-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error-message {
+  color: #a00;
+  margin-bottom: 8px;
+}
+
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.todo-content {
+  flex: 1;
+}
+
+.todo-content.completed span {
+  text-decoration: line-through;
+}
+
+.todo-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.empty-state,
+.loading {
+  color: #555;
+  padding: 12px 0;
+}

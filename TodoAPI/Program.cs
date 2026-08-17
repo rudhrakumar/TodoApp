@@ -1,6 +1,15 @@
 using TodoAPI.Services;
-
 var builder = WebApplication.CreateBuilder(args);
+
+// Add CORS policy
+builder.Services.AddCors(options => {
+    options.AddPolicy("AllowAngularDevClient", policy => {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 // Add services to the container.
 builder.Services.AddSingleton<TodoService>();
@@ -16,6 +25,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Use CORS
+app.UseCors("AllowAngularDevClient");
 
 app.UseAuthorization();
 

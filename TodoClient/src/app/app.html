@@ -2,21 +2,23 @@
   <section class="todo-card">
     <header class="todo-header">
       <div>
-        <p class="eyebrow">Task manager</p>
         <h1>Todo List</h1>
       </div>
     </header>
 
-    <form class="todo-form" (ngSubmit)="addTodo()">
+    <div class="todo-form">
       <input
         type="text"
         [(ngModel)]="newTodoTitle"
         name="newTodoTitle"
-        placeholder="Add a new todo" 
+        placeholder="Add a new todo"
         aria-label="Add a new todo"
+        [disabled]="isSaving"
       />
-      <button type="submit" [disabled]="!newTodoTitle.trim()">Add</button>
-    </form>
+      <button type="button" (click)="addTodo()" [disabled]="!newTodoTitle.trim() || isSaving">
+        {{ isSaving ? 'Saving...' : 'Add' }}
+      </button>
+    </div>
 
     <div *ngIf="errorMessage" class="error-message">
       {{ errorMessage }}
@@ -27,34 +29,27 @@
     <ul class="todo-list" *ngIf="!isLoading">
       <li *ngFor="let todo of todos" class="todo-item">
         <label class="todo-check">
-          <input type="checkbox" [checked]="todo.isCompleted" (change)="toggleTodo(todo)" />
+          <input
+            type="checkbox"
+            [checked]="todo.isCompleted"
+            [disabled]="todo.id === undefined || togglingIds.has(todo.id)"
+            (change)="toggleTodo(todo)"
+          />
         </label>
 
         <div class="todo-content" [class.completed]="todo.isCompleted">
-          <ng-container *ngIf="editingId !== todo.id; else editTemplate">
-            <span>{{ todo.title }}</span>
-          </ng-container>
-
-          <ng-template #editTemplate>
-            <input
-              type="text"
-              [(ngModel)]="editTitle"
-              name="editTitle"
-              aria-label="Edit todo title"
-            />
-          </ng-template>
+          <span>{{ todo.title }}</span>
         </div>
 
         <div class="todo-actions">
-          <ng-container *ngIf="editingId === todo.id; else normalActions">
-            <button type="button" class="save-button" (click)="saveEdit(todo)">Save</button>
-            <button type="button" class="ghost-button" (click)="cancelEdit()">Cancel</button>
-          </ng-container>
-
-          <ng-template #normalActions>
-            <button type="button" class="ghost-button" (click)="startEditing(todo)">Edit</button>
-            <button type="button" class="delete-button" (click)="deleteTodo(todo.id)">Delete</button>
-          </ng-template>
+          <button
+            type="button"
+            class="delete-button"
+            [disabled]="todo.id === undefined || deletingIds.has(todo.id)"
+            (click)="deleteTodo(todo.id)"
+          >
+            {{ deletingIds.has(todo.id ?? -1) ? 'Deleting...' : 'Delete' }}
+          </button>
         </div>
       </li>
 

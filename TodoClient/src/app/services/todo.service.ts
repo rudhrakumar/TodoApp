@@ -7,16 +7,12 @@ import { TodoItem } from '../models/todo.item';
   providedIn: 'root'
 })
 export class TodoService {
-  private readonly apiUrl = 'http://localhost:5000/api/todo';
+  private readonly apiUrl = 'http://localhost:5001/api/todo';
 
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<TodoItem[]> {
     return this.http.get<TodoItem[]>(`${this.apiUrl}/list`);
-  }
-
-  getById(id: number): Observable<TodoItem> {
-    return this.http.get<TodoItem>(`${this.apiUrl}/${id}`);
   }
 
   add(todo: TodoItem): Observable<TodoItem> {

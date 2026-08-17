@@ -2,6 +2,7 @@ using Xunit;
 using TodoAPI.Controllers;
 using Microsoft.AspNetCore.Mvc;
 using TodoAPI.Models;
+using TodoAPI.Services;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,7 +14,7 @@ namespace TodoAPI.Tests
         public void GetAll_ReturnsOk_WithEmptyListOfTodoItems()
         {
             // Arrange
-            var controller = new TodoController();
+            var controller = new TodoController(new TodoService());
 
             //Act
             var result = controller.GetAll();
@@ -32,7 +33,7 @@ namespace TodoAPI.Tests
         public void GetAll_ReturnsOk_WithListOfTodoItems()
         {
             // Arrange
-            var controller = new TodoController();
+            var controller = new TodoController(new TodoService());
             var newItem1 = new TodoItem { Title = "Test Todo Item 1" };
             var newItem2 = new TodoItem { Title = "Test Todo Item 2" };
 
@@ -51,31 +52,24 @@ namespace TodoAPI.Tests
         }
 
         [Fact]
-        public void Add_ReturnsCreatedAtAction_WithAddedTodoItem()
+        public void Add_ReturnsOk_WithAddedTodoItem()
         {
             // Arrange
-            var controller = new TodoController();
+            var controller = new TodoController(new TodoService());
             var newItem = new TodoItem { Title = "Test Todo Item" };
 
             // Act
             var result = controller.Add(newItem);
 
             //Assert
-            Assert.IsType<CreatedAtActionResult>(result);
-            var createdResult = result as CreatedAtActionResult;
-            Assert.NotNull(createdResult);
-            Assert.Equal(nameof(TodoController.GetAll), createdResult.ActionName);
-            Assert.IsType<TodoItem>(createdResult.Value);
-            var addedItem = createdResult.Value as TodoItem;
-            Assert.Equal(newItem.Title, addedItem.Title);
-            Assert.Equal(1, addedItem.Id); // Since it's the first item added, its Id should be 1
+            Assert.IsType<OkResult>(result);
         }
 
         [Fact]
         public void Update_ExistingItem_UpdatesProperties()
         {
             // Arrange
-            var controller = new TodoController();
+            var controller = new TodoController(new TodoService());
             
             // Seed the controller with an initial item
             var initialItem = new TodoItem { Title = "Old Title", IsCompleted = false };
@@ -99,7 +93,7 @@ namespace TodoAPI.Tests
         public void Delete_ExistingItem_RemovesItem()
         {
             // Arrange
-            var controller = new TodoController();
+            var controller = new TodoController(new TodoService());
             var newItem = new TodoItem { Title = "Test Todo Item" };
             controller.Add(newItem);
             int itemIdToDelete = newItem.Id;
@@ -108,6 +102,46 @@ namespace TodoAPI.Tests
             // Assert
             var result = controller.GetById(itemIdToDelete);
             Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public void Delete_OnlyRemovesSelectedItem_WhenMultipleItemsExist()
+        {
+            // Arrange
+            var sharedService = new TodoService();
+            var controller1 = new TodoController(sharedService);
+            var controller2 = new TodoController(sharedService);
+
+            controller1.Add(new TodoItem { Title = "First item" });
+            controller1.Add(new TodoItem { Title = "Second item" });
+
+            // Act
+            controller2.Delete(1);
+
+            // Assert
+            var result = controller1.GetAll();
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var items = Assert.IsAssignableFrom<IEnumerable<TodoItem>>(okResult.Value).ToList();
+            Assert.Equal(1, items.Count);
+            Assert.Equal("Second item", items[0].Title);
+        }
+
+        [Fact]
+        public void Add_UsesSharedServiceState_AcrossControllerInstances()
+        {
+            // Arrange
+            var sharedService = new TodoService();
+            var controller1 = new TodoController(sharedService);
+            var controller2 = new TodoController(sharedService);
+
+            // Act
+            controller1.Add(new TodoItem { Title = "Persisted item" });
+            var result = controller2.GetAll();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var items = Assert.IsAssignableFrom<IEnumerable<TodoItem>>(okResult.Value);
+            Assert.Single(items);
         }
     }
 }

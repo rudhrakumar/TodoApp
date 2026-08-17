@@ -5,7 +5,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add CORS policy
 builder.Services.AddCors(options => {
     options.AddPolicy("AllowAngularDevClient", policy => {
-        policy.WithOrigins("http://localhost:4200").AllowAnyMethod().AllowAnyHeader();
+        policy
+            .WithOrigins(
+                "http://localhost:4200",
+                "http://127.0.0.1:4200"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
 });
 

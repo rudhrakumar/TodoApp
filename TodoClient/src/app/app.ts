@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { TodoItem } from './models/todo.item';
 import { TodoService } from './services/todo.service';
 
@@ -16,10 +17,11 @@ export class App implements OnInit {
 
   todos: TodoItem[] = [];
   newTodoTitle = '';
-  editTitle = '';
-  editingId: number | null = null;
   errorMessage = '';
   isLoading = false;
+  isSaving = false;
+  togglingIds = new Set<number>();
+  deletingIds = new Set<number>();
 
   ngOnInit(): void {
     this.loadTodos();
@@ -30,8 +32,8 @@ export class App implements OnInit {
     this.errorMessage = '';
 
     this.todoService.getAll().subscribe({
-      next: (items) => {
-        this.todos = items;
+      next: (data: TodoItem[]) => {
+        this.todos = data;
         this.isLoading = false;
       },
       error: () => {
@@ -43,89 +45,99 @@ export class App implements OnInit {
 
   addTodo(): void {
     const title = this.newTodoTitle.trim();
-    if (!title) {
+    if (!title || this.isSaving) {
       return;
     }
 
-    const todo: TodoItem = {
+    this.isSaving = true;
+    this.errorMessage = '';
+
+    const optimisticTodo: TodoItem = {
+      id: Math.max(0, ...this.todos.map((todo) => todo.id ?? 0)) + 1,
       title,
-      isCompleted: false
+      isCompleted: false,
     };
 
-    this.todoService.add(todo).subscribe({
-      next: (createdTodo) => {
-        this.todos.unshift(createdTodo);
-        this.newTodoTitle = '';
-        this.errorMessage = '';
+    this.todos = [...this.todos, optimisticTodo];
+    this.newTodoTitle = '';
+
+    this.todoService.add({ title, isCompleted: false }).subscribe({
+      next: () => {
+        this.isSaving = false;
+        this.loadTodos();
       },
       error: () => {
+        this.todos = this.todos.filter((todo) => todo.id !== optimisticTodo.id);
+        this.isSaving = false;
         this.errorMessage = 'Unable to create todo.';
+      },
+      complete: () => {
+        this.isSaving = false;
       }
     });
   }
 
   toggleTodo(todo: TodoItem): void {
-    if (todo.id === undefined) {
+    if (todo.id === undefined || this.togglingIds.has(todo.id)) {
       return;
     }
 
-    const updatedTodo = { ...todo, isCompleted: !todo.isCompleted };
+    const todoId = todo.id;
+    const nextValue = !todo.isCompleted;
+    const previousTodos = [...this.todos];
+    const updatedTodo = { ...todo, isCompleted: nextValue };
+    this.togglingIds.add(todoId);
 
-    this.todoService.update(todo.id, updatedTodo).subscribe({
-      next: () => {
-        todo.isCompleted = updatedTodo.isCompleted;
-        this.errorMessage = '';
-      },
-      error: () => {
-        this.errorMessage = 'Unable to update todo.';
-      }
-    });
-  }
+    this.todos = this.todos.map((item) =>
+      item.id === todoId ? { ...item, isCompleted: nextValue } : item
+    );
+    this.errorMessage = '';
 
-  startEditing(todo: TodoItem): void {
-    this.editingId = todo.id ?? null;
-    this.editTitle = todo.title ?? '';
-  }
-
-  saveEdit(todo: TodoItem): void {
-    const title = this.editTitle.trim();
-    if (!todo.id || !title) {
-      return;
-    }
-
-    const updatedTodo = { ...todo, title };
-
-    this.todoService.update(todo.id, updatedTodo).subscribe({
-      next: () => {
-        todo.title = title;
-        this.editingId = null;
-        this.editTitle = '';
-        this.errorMessage = '';
-      },
-      error: () => {
-        this.errorMessage = 'Unable to update todo.';
-      }
-    });
-  }
-
-  cancelEdit(): void {
-    this.editingId = null;
-    this.editTitle = '';
+    this.todoService.update(todoId, updatedTodo)
+      .pipe(
+        finalize(() => {
+          this.togglingIds.delete(todoId);
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.todos = this.todos.map((item) =>
+            item.id === todoId ? { ...item, isCompleted: nextValue } : item
+          );
+        },
+        error: () => {
+          this.todos = previousTodos;
+          this.errorMessage = 'Unable to update todo.';
+        }
+      });
   }
 
   deleteTodo(id?: number): void {
-    if (id === undefined) {
+    if (id === undefined || this.deletingIds.has(id)) {
       return;
     }
 
-    this.todoService.delete(id).subscribe({
-      next: () => {
-        this.todos = this.todos.filter((todo) => todo.id !== id);
-        this.errorMessage = '';
-      },
-      error: () => {
-        this.errorMessage = 'Unable to delete todo.';
-      }
-    });
+    const todoId = id;
+    this.deletingIds.add(todoId);
+    const previousTodos = [...this.todos];
+
+    this.todos = this.todos.filter((todo) => todo.id !== todoId);
+    this.errorMessage = '';
+
+    this.todoService.delete(todoId)
+      .pipe(
+        finalize(() => {
+          this.deletingIds.delete(todoId);
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.todos = this.todos.filter((todo) => todo.id !== todoId);
+        },
+        error: () => {
+          this.todos = previousTodos;
+          this.errorMessage = 'Unable to delete todo.';
+        }
+      });
   }
 }

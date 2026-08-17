@@ -67,7 +67,7 @@ namespace TodoAPI.Tests
             Assert.IsType<TodoItem>(okResult.Value);
             var addedItem = okResult.Value as TodoItem;
             Assert.Equal(newItem.Title, addedItem.Title);
-            Assert.Equal(1, addedItem.Id); // Since it's the first item added, its Id should be 1
+            Assert.Equal(1, addedItem.Id); // It's the first item added, Id should be 1
         }
 
         [Fact]

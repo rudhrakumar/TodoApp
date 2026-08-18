@@ -45,3 +45,5 @@ ng serve
 ```
 
 4. Open your web browser and navigate to **[http://localhost:4200/](http://localhost:4200/)** to view and use the application.
+
+![Todo List application interface showing a form to add new todos, with two sample tasks: Buy groceries (unchecked) and Water indoor plants (checked). The interface has a clean, minimalist design with a text input field labeled Add a new todo, a list of tasks with checkboxes, and delete buttons for each task.](image.png)
